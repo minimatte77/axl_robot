@@ -7,93 +7,12 @@ import time
 import threading
 import math
 
-class Servo_ctrl(threading.Thread):
-    def __init__(self, *args, **kwargs):
-        super(Servo_ctrl, self).__init__(*args, **kwargs)
-        self.__flag = threading.Event()
-        self.__flag.set()
-        self.__running = threading.Event()
-        self.__running.set()
-
-    def run(self):
-        global goal_pos, servo_command, init_get, if_continue, walk_step
-        while self.__running.isSet():
-            self.__flag.wait()
-            if not steadyMode:
-                command_GenOut()
-                while move_smooth_goal():
-                    if goal_command == 'stop':
-                        break
-                    else:
-                        continue
-                if goal_command == 'StandUp' or goal_command == 'StayLow' or goal_command == 'Lean-L' or goal_command == 'Lean-R':
-                    servoStop()
-            else:
-                steady()
-                time.sleep(0.03)		
-            print('loop')
-
-    def pause(self):
-        self.__flag.clear()
-
-    def resume(self):
-        self.__flag.set()
-
-    def stop(self):
-        self.__flag.set()
-        self.__running.clear()
-
-class Head_ctrl(threading.Thread):
-    def __init__(self, *args, **kwargs):
-        super(Head_ctrl, self).__init__(*args, **kwargs)
-        self.__flag = threading.Event()
-        self.__flag.set()
-        self.__running = threading.Event()
-        self.__running.set()
-
-    def run(self):
-        global T_command, P_command
-        while self.__running.isSet():
-            self.__flag.wait()
-            if T_command == 'headUp':
-                up(PT_speed)
-            elif T_command == 'headDown':
-                down(PT_speed)
-            
-            if P_command == 'headRight':
-                lookright(PT_speed)
-            elif P_command == 'headLeft':
-                lookleft(PT_speed)
-
-            if max_dict['P'] == goal_dict['P'] or min_dict['P'] == goal_dict['P']:
-                P_command = 'stop'
-
-            if max_dict['T'] == goal_dict['T'] or min_dict['T'] == goal_dict['T']:
-                T_command = 'stop'
-
-            if T_command == 'stop' and P_command == 'stop':
-                self.pause()
-
-            time.sleep(PT_deley)
-            print('loop')
-
-
-
-    def pause(self):
-        self.__flag.clear()
-
-    def resume(self):
-        self.__flag.set()
-
-    def stop(self):
-        self.__flag.set()
-        self.__running.clear()
-
 class AxlRobot:
     def __init__(self,name):
         self.robotname=name
         self.speed=100
-        self.legs_coord = [[0, 0], [0, 0], [0, 0], [0, 0]]
+        self.legs_motor_port = [0,0]    #pin controllo motori
+        self.legs_servo_port = [0,0]    #pin controllo motori
         try:
             import Adafruit_PCA9685
             self.pwm = Adafruit_PCA9685.PCA9685()
