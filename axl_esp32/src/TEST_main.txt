@@ -1,0 +1,49 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+// Credenziali Wi-Fi
+const char* ssid = "Piano_Terra_WIFI";
+const char* password = "monster600";
+
+// Indirizzo IP del broker MQTT
+const char* mqtt_server = "192.168.1.58";
+
+// Creazione oggetto WiFiClient e PubSubClient
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+void setup() {
+    Serial.begin(115200);
+    
+    // Connessione Wi-Fi
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("\nConnesso al Wi-Fi!");
+    Serial.print("IP ESP32: ");
+    Serial.println(WiFi.localIP());
+    
+    // Configura il broker MQTT
+    client.setServer(mqtt_server, 1883);
+
+    // Prova connessione al broker
+    while (!client.connected()) {
+        Serial.println("Tentativo di connessione al broker MQTT...");
+        if (client.connect("ESP32Client")) {
+            Serial.println("Connesso al broker MQTT!");
+        } else {
+            Serial.print("Connessione fallita, stato: ");
+            Serial.println(client.state());
+            delay(5000);
+        }
+    }
+
+    // Pubblica un messaggio di test
+    client.publish("test/topic", "Hello from ESP32");
+}
+
+void loop() {
+    client.loop();
+}

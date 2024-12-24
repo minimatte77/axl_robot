@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "axl_esp32s3",
+			"path": "../../../PlatformIO/Projects/axl_esp32s3"
+		}
+	],
+	"settings": {}
+}
