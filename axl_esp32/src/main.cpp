@@ -5,6 +5,7 @@
 #include <WebServer.h> // Libreria per il server HTTP
 #include <PubSubClient.h>
 #include <time.h>
+#include <ArduinoJson.h>
 
 // Credenziali per la rete Wi-Fi esistente (modalità STA)
 const char* ssid = "Piano_Terra_WIFI";       // Nome della rete Wi-Fi esistente
@@ -22,6 +23,15 @@ const int daylightOffset_sec = 3600; // Ora legale (1 ora)
 #define MAX_MESSAGES 20
 String messages[MAX_MESSAGES];
 int messageIndex = 0;
+
+// Struttura dati
+struct DataMove {
+    int SERVO;
+    int POSITION;
+};
+
+DataMove receivedData;
+
 /* LED */
 #define LED_PIN GPIO_NUM_48  // Cambia questo valore con il GPIO corretto se necessario
 
@@ -119,8 +129,11 @@ void handleRoot() {
         </head>
         <body>
             <h1>AXL-ESP32 Server HTTP</h1>
-            <p>Invia un comando usando l'URL: <code>?cmd=LED_ON</code> o <code>?cmd=LED_OFF</code>.</p>
+            <p>Invia un comando usando l'URL: <code>?cmd=...</code> .</p>
+            <p> =MOVE_NRSERVO(2crt 01)_POSIZIONE(3crt 090) </p>
             <h1>MQTT Messages</h1>
+            <p> json MQTT  </p>
+            <p> {"SERVO": 01, "POSITION": 180} <p>
             <ul>
             )rawliteral";
     // Aggiungi i messaggi ricevuti alla pagina
@@ -181,8 +194,40 @@ void setupWiFiAPSTA() {
     }
 }
 
+// Funzione per gestire messaggi MQTT
 void callback(char* topic, byte* payload, unsigned int length) {
   String message = "";
+//  if(topic==mqttMove)
+  if (strcmp(topic, mqttMove) == 0)
+  {
+    // ESEMPIO {"SERVO": 01, "POSITION": 180}
+    // Convertire il payload in una stringa
+    char jsonBuffer[length + 1];
+    memcpy(jsonBuffer, payload, length);
+    jsonBuffer[length] = '\0';
+    // Stampa il messaggio ricevuto (per debug)
+    Serial.print("Payload: ");
+    Serial.println(jsonBuffer);
+    // Parse del JSON
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, jsonBuffer);
+
+    if (error) {
+        Serial.print("Error deserializing JSON: ");
+        Serial.println(error.c_str());
+        return;
+    }
+    // Riempire la struttura con i dati ricevuti
+    receivedData.SERVO = doc["SERVO"];
+    receivedData.POSITION = doc["POSITION"];
+
+    // Stampare i dati ricevuti (per debug)
+    Serial.println("Received Data:");
+    Serial.print("SERVO: ");
+    Serial.println(receivedData.SERVO);
+    Serial.print("POSITION: ");
+    Serial.println(receivedData.POSITION);
+  }
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("]: ");
@@ -212,6 +257,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
+// Setup MQTT
 void setupMQTT()
 {
     // Connessione al broker MQTT
@@ -274,6 +320,10 @@ void setup() {
 
 // the loop function runs over and over again forever
 void loop() {
+    // Riconnettersi se necessario
+    if (!client.connected()) {
+        setupMQTT();
+    }
   // Gestisce MQTT
   client.loop();
   // Gestisci le richieste HTTP
